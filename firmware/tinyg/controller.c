@@ -184,12 +184,12 @@ static uint8_t _dispatch()
 			tg_reset_source();					// reset to default source
 		}
 		// read from secondary source
-		if (tg.in2_buf != NULL) {
-			if ((status = xio_gets(tg.secondary_src, tg.in2_buf, sizeof(tg.in2_buf))) == TG_OK) {
-				tg.bufp = tg.in2_buf;
-				break;
-			}
-		}
+//		if (tg.in2_buf != NULL) {
+//			if ((status = xio_gets(tg.secondary_src, tg.in2_buf, sizeof(tg.in2_buf))) == TG_OK) {
+//				tg.bufp = tg.in2_buf;
+//				break;
+//			}
+//		}
 		return (status);						// Note: TG_EAGAIN, errors, etc. will drop through
 	}
 	cmd_reset_list();
