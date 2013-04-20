@@ -110,6 +110,8 @@ void xio_init()
 	xio_open(XIO_DEV_RS485,0, RS485_FLAGS);
 	xio_open(XIO_DEV_SPI1, 0, SPI_FLAGS);
 	xio_open(XIO_DEV_SPI2, 0, SPI_FLAGS);
+
+	xio_enable_rs485_rx();		// needed for clean start for RS-485
 }
 
 void xio_reset_working_flags(xioDev_t *d)
