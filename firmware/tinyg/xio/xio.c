@@ -107,7 +107,7 @@ void xio_init()
 
 	// open individual devices (file device opens occur at time-of-use)
 	xio_open(XIO_DEV_USB,  0, USB_FLAGS);
-//	xio_open(XIO_DEV_RS485,0, RS485_FLAGS);
+	xio_open(XIO_DEV_RS485,0, RS485_FLAGS);
 	xio_open(XIO_DEV_SPI1, 0, SPI_FLAGS);
 	xio_open(XIO_DEV_SPI2, 0, SPI_FLAGS);
 }
@@ -250,7 +250,7 @@ void xio_set_stdout(const uint8_t dev) { stdout = &ds[dev].file; }
 void xio_set_stderr(const uint8_t dev)
 {
 	stderr = &ds[dev].file; 
-	xio.stderr_shadow = stderr;
+	xio.stderr_shadow = stderr;		// this is the last thing in RAM, so we use it as a memory corruption canary
 }
 
 /*

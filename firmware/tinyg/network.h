@@ -1,8 +1,8 @@
 /*
- * pwm.h - pulse width modulation drivers
+ * network.h - tinyg networking protocol
  * Part of TinyG project
  *
- * Copyright (c) 2012 - 2013 Alden S. Hart Jr.
+ * Copyright (c) 2011 - 2012 Alden S. Hart Jr.
  *
  * TinyG is free software: you can redistribute it and/or modify it 
  * under the terms of the GNU General Public License as published by 
@@ -25,21 +25,25 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE 
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+#ifndef network_h
+#define network_h
 
-#ifndef pwm_h
-#define pwm_h
+/*
+ * Global Scope Functions
+ */
 
-void pwm_init(void);
-uint8_t pwm_set_freq(uint8_t channel, double freq);
-uint8_t pwm_set_duty(uint8_t channel, double duty);
+enum networkMode {
+	NETWORK_STANDALONE = 0,
+	NETWORK_MASTER,
+	NETWORK_SLAVE
+};
 
+void net_init();
+void net_forward(unsigned char c);
+uint8_t net_test_rxtx(uint8_t c);
+uint8_t net_test_loopback(uint8_t c);
 
-//#define __UNIT_TEST_PWM		// uncomment to enable PWM unit tests
-#ifdef __UNIT_TEST_PWM
-void pwm_unit_tests(void);
-#define	PWM_UNITS pwm_unit_tests();
-#else
-#define	PWM_UNITS
-#endif
+#define XIO_DEV_NET XIO_DEV_RS485	// define the network channel
+//#define net_forward(c) (xio_putc(XIO_DEV_NET,c))
 
 #endif

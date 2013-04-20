@@ -70,20 +70,18 @@ static uint8_t _sync_to_planner(void);
  * tg_init() - controller init
  */
 
-void tg_init(uint8_t default_src) 
+void tg_init(uint8_t std_in, uint8_t std_out, uint8_t std_err) 
 {
-	cfg.fw_build = TINYG_BUILD_NUMBER;
-	cfg.fw_version = TINYG_VERSION_NUMBER;
-	cfg.hw_version = TINYG_HARDWARE_VERSION;
-
 	tg.magic_start = MAGICNUM;
 	tg.magic_end = MAGICNUM;
+	tg.fw_build = TINYG_FIRMWARE_BUILD;
+	tg.fw_version = TINYG_FIRMWARE_VERSION;	// NB: HW version is set from EEPROM
 
-	tg.default_src = default_src;
-	xio_set_stdin(tg.default_src);
-	xio_set_stdout(tg.default_src);
-	xio_set_stderr(STD_ERROR);
-	tg_set_active_source(tg.default_src);	// set initial active source
+	xio_set_stdin(std_in);
+	xio_set_stdout(std_out);
+	xio_set_stderr(std_err);
+	tg.default_src = std_in;
+	tg_set_primary_source(tg.default_src);	// set primary source
 }
 
 /* 
@@ -118,6 +116,17 @@ void tg_controller()
 #define	DISPATCH(func) if (func == TG_EAGAIN) return; 
 static void _controller_HSM()
 {
+//----- ISRs. These should be considered the highest priority scheduler functions ----//
+/*	
+ *	HI	Stepper DDA pulse generation		// see stepper.h
+ *	HI	Stepper load routine SW interrupt	// see stepper.h
+ *	HI	Dwell timer counter 				// see stepper.h
+ *	MED	GPIO1 switch port - limits / homing	// see gpio.h
+ *  MED	Serial RX for USB					// see xio_usart.h
+ *  LO	Segment execution SW interrupt		// see stepper.h
+ *  LO	Serial TX for USB & RS-485			// see xio_usart.h
+ *	LO	Real time clock interrupt			// see xmega_rtc.h
+ */
 //----- kernel level ISR handlers ----(flags are set in ISRs)-----------//
 											// Order is important:
 	DISPATCH(_reset_handler());				// 1. software reset received
@@ -158,19 +167,38 @@ static uint8_t _dispatch()
 
 	// read input line or return if not a completed line
 	// xio_gets() is a non-blocking workalike of fgets()
-	if ((status = xio_gets(tg.src, tg.in_buf, sizeof(tg.in_buf))) != TG_OK) {
+	while (true) {
+		// read from primary source
+		if ((status = xio_gets(tg.primary_src, tg.in_buf, sizeof(tg.in_buf))) == TG_OK) {
+			tg.bufp = tg.in_buf;
+			printf ("%s\n", tg.bufp);
+			break;
+		}
+		// handle end-of-file from primary source
 		if (status == TG_EOF) {					// EOF can come from file devices only
-			fprintf_P(stderr, PSTR("End of command file\n"));
+			if (cfg.comm_mode == TEXT_MODE) {
+				fprintf_P(stderr, PSTR("End of command file\n"));
+			} else {
+				rpt_exception(TG_EOF, 0);		// not really an exception
+			}
 			tg_reset_source();					// reset to default source
 		}
-		// Note that TG_EAGAIN, TG_NOOP etc. will just flow through
-		return (status);
+		// read from secondary source
+		if (tg.in2_buf != NULL) {
+			if ((status = xio_gets(tg.secondary_src, tg.in2_buf, sizeof(tg.in2_buf))) == TG_OK) {
+				tg.bufp = tg.in2_buf;
+				break;
+			}
+		}
+		return (status);						// Note: TG_EAGAIN, errors, etc. will drop through
 	}
-	tg.linelen = strlen(tg.in_buf)+1;
-	strncpy(tg.saved_buf, tg.in_buf, SAVED_BUFFER_LEN-1);	// save input buffer for reporting
+	cmd_reset_list();
+	tg.linelen = strlen(tg.in_buf)+1;					// linelen only tracks primary input
+	strncpy(tg.saved_buf, tg.bufp, SAVED_BUFFER_LEN-1);	// save input buffer for reporting
 
 	// dispatch the new text line
-	switch (toupper(tg.in_buf[0])) {
+//	switch (toupper(tg.bufp[0])) {
+	switch (toupper(*tg.bufp)) {				// first char
 
 		case NUL: { 							// blank line (just a CR)
 			if (cfg.comm_mode != JSON_MODE) {
@@ -181,26 +209,26 @@ static uint8_t _dispatch()
 		case 'H': { 							// intercept help screens
 			cfg.comm_mode = TEXT_MODE;
 			print_general_help();
-			tg_text_response(TG_OK, tg.in_buf);
+			tg_text_response(TG_OK, tg.bufp);
 			break;
 		}
 		case '$': case '?':{ 					// text-mode configs
 			cfg.comm_mode = TEXT_MODE;
-			tg_text_response(cfg_text_parser(tg.in_buf), tg.saved_buf);
+			tg_text_response(cfg_text_parser(tg.bufp), tg.saved_buf);
 			break;
 		}
 		case '{': { 							// JSON input
 			cfg.comm_mode = JSON_MODE;
-			js_json_parser(tg.in_buf);
+			js_json_parser(tg.bufp);
 			break;
 		}
 		default: {								// anything else must be Gcode
 			if (cfg.comm_mode == JSON_MODE) {
-				strncpy(tg.out_buf, tg.in_buf, INPUT_BUFFER_LEN -8);	// use out_buf as temp
-				sprintf(tg.in_buf,"{\"gc\":\"%s\"}\n", tg.out_buf);		// '-8' is used for JSON chars
-				js_json_parser(tg.in_buf);
+				strncpy(tg.out_buf, tg.bufp, INPUT_BUFFER_LEN -8);	// use out_buf as temp
+				sprintf(tg.bufp,"{\"gc\":\"%s\"}\n", tg.out_buf);
+				js_json_parser(tg.bufp);
 			} else {
-				tg_text_response(gc_gcode_parser(tg.in_buf), tg.saved_buf);
+				tg_text_response(gc_gcode_parser(tg.bufp), tg.saved_buf);
 			}
 		}
 	}
@@ -265,23 +293,16 @@ static uint8_t _sync_to_planner()
 	return (TG_OK);
 }
 
-void tg_reset_source()
-{
-	tg_set_active_source(tg.default_src);
-}
-
-void tg_set_active_source(uint8_t dev)
-{
-	tg.src = dev;						// dev = XIO device #. See xio.h
-}
+void tg_reset_source() { tg_set_primary_source(tg.default_src);}
+void tg_set_primary_source(uint8_t dev) { tg.primary_src = dev;}
+void tg_set_secondary_source(uint8_t dev) { tg.secondary_src = dev;}
 
 /**** Signal handlers ****
  * _reset_handler()
- * _bootloader_handler()
  * _feedhold_handler()
  * _cycle_start_handler()
+ * _bootloader_handler()
  */
-
 static uint8_t _reset_handler(void)
 {
 	if (sig.sig_reset == false) { return (TG_NOOP);}
@@ -289,27 +310,6 @@ static uint8_t _reset_handler(void)
 	tg_reset();							// hard reset - identical to hitting RESET button
 	return (TG_EAGAIN);
 }
-
-static uint8_t _bootloader_handler(void)
-{
-	if (sig.sig_request_bootloader == false) { return (TG_NOOP);}
-	cli();
-	asm("jmp 0x030000");
-	return (TG_EAGAIN);					// never gets here but keeps the compiler happy
-}
-
-/*
-static uint8_t _bootloader_handler(void)
-{
-	if (sig.sig_request_bootloader == false) { return (TG_NOOP);}
-//	sig.sig_request_bootloader = false;
-	asm("jmp 0x030000");
-//	CCPWrite( &RST.CTRL, RST_SWRST_bm );
-//	CCP = CCP_IOREG_gc;
-//	RST.CTRL = RST_SWRST_bm;
-	return (TG_EAGAIN);					// never gets here but keeps the compiler happy
-}
-*/
 
 static uint8_t _feedhold_handler(void)
 {
@@ -328,13 +328,46 @@ static uint8_t _cycle_start_handler(void)
 }
 
 /*
+ * _bootloader_handler() - executes a software reset using CCPWrite
+ *
+ * 	An earlier attempt turned off interrupts, reset the stack pointer and jumped
+ *	to the boot region. The assembly code is preserved below as an example.
+ *	All the values in the assembly are hard coded because the pre-processor 
+ *	doesn't open strings to process #defines.
+ *
+ *	  RAMEND 	0x05ff					// starting location for stack pointer
+ *	  SPL		0x3d					// stack pointer lo
+ *	  SPH		0x3e					// stack pointer hi
+ *	  BOOTSTRT	0x030000				// start of boot region
+ *
+	asm("ldi r16, 0xff" "\n\t" \
+		"out 0x3d, r16" "\n\t" \
+		"ldi r16, 0x5f" "\n\t" \
+		"out 0x3e, r16" "\n\t" \
+		"jmp 0x030000"  "\n\t" \
+		);
+ *
+ *  Refs:
+ *	  https://sites.google.com/site/avrasmintro/
+ *	  http://www.stanford.edu/class/ee281/projects/aut2002/yingzong-mouse/media/GCCAVRInlAsmCB.pdf
+ */
+static uint8_t _bootloader_handler(void)
+{
+	if (sig.sig_request_bootloader == false) { return (TG_NOOP);}
+	cli();
+	CCPWrite(&RST.CTRL, RST_SWRST_bm);
+	return (TG_EAGAIN);					// never gets here but keeps the compiler happy
+}
+
+/*
  * _limit_switch_handler() - shut down system if limit switch fired
  */
 static uint8_t _limit_switch_handler(void)
 {
 	if (cm_get_machine_state() == MACHINE_SHUTDOWN) { return (TG_NOOP);}
 	if (gpio_get_limit_thrown() == false) return (TG_NOOP);
-	cm_shutdown();
+//	cm_shutdown(gpio_get_sw_thrown); // unexplained complier warning: passing argument 1 of 'cm_shutdown' makes integer from pointer without a cast
+	cm_shutdown(sw.sw_num_thrown);
 	return (TG_OK);
 }
 
@@ -345,7 +378,7 @@ static uint8_t _limit_switch_handler(void)
  *	this point. It's important that the reset handler is still called so a SW reset
  *	(ctrl-x) can be processed.
  */
-#define LED_COUNTER 100000
+#define LED_COUNTER 25000
 
 static uint8_t _shutdown_idler(void)
 {
@@ -371,7 +404,7 @@ uint8_t _system_assertions()
 {
 	uint8_t value = 0;
 
-	if (tg.magic_start		!= MAGICNUM) { value = 1; }
+	if (tg.magic_start		!= MAGICNUM) { value = 1; }		// Note: reported VALue is offset by ALARM_MEMORY_OFFSET
 	if (tg.magic_end		!= MAGICNUM) { value = 2; }
 	if (cm.magic_start 		!= MAGICNUM) { value = 3; }
 	if (cm.magic_end		!= MAGICNUM) { value = 4; }
@@ -385,13 +418,15 @@ uint8_t _system_assertions()
 	if (mb.magic_end		!= MAGICNUM) { value = 12; }
 	if (mr.magic_start		!= MAGICNUM) { value = 13; }
 	if (mr.magic_end		!= MAGICNUM) { value = 14; }
-	if (st_get_st_magic()	!= MAGICNUM) { value = 15; }
-	if (st_get_sps_magic()	!= MAGICNUM) { value = 16; }
-	if (rtc.magic_end 		!= MAGICNUM) { value = 17; }
+	if (ar.magic_start		!= MAGICNUM) { value = 15; }
+	if (ar.magic_end		!= MAGICNUM) { value = 16; }
+	if (st_get_st_magic()	!= MAGICNUM) { value = 17; }
+	if (st_get_sps_magic()	!= MAGICNUM) { value = 18; }
+	if (rtc.magic_end 		!= MAGICNUM) { value = 19; }
 	xio_assertions(&value);									// run xio assertions
 
 	if (value == 0) { return (TG_OK);}
 	rpt_exception(TG_MEMORY_CORRUPTION, value);
-	cm_shutdown();
+	cm_shutdown(ALARM_MEMORY_OFFSET + value);	
 	return (TG_EAGAIN);
 }

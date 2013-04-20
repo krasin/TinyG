@@ -3,6 +3,7 @@
  * Part of TinyG project
  *
  * Copyright (c) 2010 - 2013 Alden S. Hart Jr.
+ * Copyright (c) 2012 - 2013 Rob Giseburt
  *
  * TinyG is free software: you can redistribute it and/or modify it 
  * under the terms of the GNU General Public License as published by 
@@ -571,6 +572,7 @@ static void _calculate_trapezoid(mpBuf_t *bf)
  *  FYI: Here's an expression that returns the jerk for a given deltaV and L:
  * 	return(cube(deltaV / (pow(L, 0.66666666))));
  */
+
 static double _get_target_length(const double Vi, const double Vt, const mpBuf_t *bf)
 {
 	return (fabs(Vi-Vt) * sqrt(fabs(Vi-Vt) * bf->recip_jerk));
@@ -581,6 +583,65 @@ static double _get_target_velocity(const double Vi, const double L, const mpBuf_
 	return (pow(L, 0.66666666) * bf->cbrt_jerk + Vi);
 }
 
+/*	
+ * _get_target_length2()	- derive accel/decel length from delta V and jerk
+ * _get_target_velocity2()	- derive velocity achievable from delta V and length
+ *
+ *	This set of functions returns the fourth thing knowing the other three.
+ *	
+ * 	  Jm = the given maximum jerk
+ *	  T  = time of the entire move
+ *	  T  = 2*sqrt((Vt-Vi)/Jm)
+ *	  As = The acceleration at inflection point between convex and concave portions of the S-curve.
+ *	  As = (Jm*T)/2
+ *    Ar = ramp acceleration
+ *	  Ar = As/2 = (Jm*T)/4
+ *	
+ *	Assumes Vt, Vi and L are positive or zero
+ *	Cannot assume Vt>=Vi due to rounding errors and use of PLANNER_VELOCITY_TOLERANCE
+ *	necessitating the introduction of fabs()
+ *
+ *	_get_target_length() is a convenient function for determining the optimal_length (L) 
+ *	of a line given the inital velocity (Vi), target velocity (Vt) and maximum jerk (Jm).
+ *
+ *	The length (distance) equation is derived from: 
+ *
+ *	 a) L = Vi * Td + (Ar*Td^2)/2		... which becomes b) with substitutions for Ar and T
+ *	 b) L = 2 * (Vi*sqrt((Vt-Vi)/Jm) + sqrt((Vt-Vi)/Jm)/2 * (Vt-Vi))
+ *	 c) L = (Vt+Vi) * sqrt(abs(Vt-Vi)/Jm) 	... a short alternate form of b) assuming only positive values
+ *
+ *	 Notes: Ar = (Jm*T)/4					Ar is ramp acceleration
+ *			T  = 2*sqrt((Vt-Vi)/Jm)			T is time
+ *
+ *			Assumes Vt, Vi and L are positive or zero
+ *			Cannot assume Vt>=Vi due to rounding errors and use of PLANNER_VELOCITY_TOLERANCE
+ *			necessitating the introduction of fabs()
+ *
+ * 	_get_target_velocity() is a convenient function for determining Vt target 
+ *	velocity for a given the initial velocity (Vi), length (L), and maximum jerk (Jm).
+ *	Solving equation c) for Vt gives d)
+ *
+ *	 d) 1/3*((3*sqrt(3)*sqrt(27*Jm^2*L^4+32*Jm*L^2*Vi^3)+27*Jm*L^2+16*Vi^3)^(1/3)/2^(1/3) + 
+ *      (4*2^(1/3)*Vi^2)/(3*sqrt(3)*sqrt(27*Jm^2*L^4+32*Jm*L^2*Vi^3)+27*Jm*L^2+16*Vi^3)^(1/3) - Vi)
+ *
+ *  FYI: Here's an expression that returns the jerk for a given deltaV (Vt-Vi) and L:
+ * 	return(cube(deltaV / (pow(L, 0.66666666))));
+ */
+ /*
+static double _get_target_length(const double Vi, const double Vt, const mpBuf_t *bf)
+{
+	return ((Vt+Vi) * sqrt(fabs(Vt-Vi) * bf->recip_jerk));
+}
+
+static double _get_target_velocity(const double Vi, const double L, const mpBuf_t *bf)
+{
+	double JmL2 = bf->jerk*square(L);
+	double Vi2 = square(Vi);
+	double Vi3x16 = 16*Vi*Vi2;
+	double Ia = cbrt(3*sqrt(3) * sqrt(27*square(JmL2) + (2*JmL2*Vi3x16)) + 27*JmL2 + Vi3x16);
+	return ((Ia/cbrt(2) + 4*cbrt(2)*Vi2/Ia - Vi)/3);
+}
+*/
 /*
  * _get_junction_vmax() - Chamnit's algorithm - simple
  *
@@ -991,7 +1052,6 @@ static uint8_t _exec_aline(mpBuf_t *bf)
 	//	  TG_OK		 MOVE_STATE_NEW	 mr done; bf must be run again (it's been reused)
 
 	if (status == TG_EAGAIN) { 
-//		rpt_decr_status_report(); 				// continue running mr buffer
 		rpt_request_status_report(); 			// continue reporting mr buffer
 	} else {
 		mr.move_state = MOVE_STATE_OFF;			// reset mr buffer
@@ -1005,23 +1065,23 @@ static uint8_t _exec_aline(mpBuf_t *bf)
 }
 
 /* Forward difference math explained:
- * 	We're using two quadratic curve end-to-end, forming the concave and convex 
- *	section of the s-curve.
- *	For each half, we have three points:
- * 	T[0] is the start point, or the entro or middle of the "s". This will be one of:
- *  	entry_velocity (acceleration concave),
- * 		cruise_velocity (deceleration concave), or
- * 		midpoint_velocity (convex)
- *	T[1] is the "control point" set to T[0] for concave sections, and T[2] for convex
- *	T[2] is the end point of the quadratic, which will be the midpoint or endpoint of the s.
+ * 	We're using two quadratic curves end-to-end, forming the concave and convex 
+ *	section of the s-curve. For each half, we have three points:
+ *
+ *    T[0] is the start point, or the entro or middle of the "s". This will be one of:
+ *  	- entry_velocity (acceleration concave),
+ * 		- cruise_velocity (deceleration concave), or
+ * 		- midpoint_velocity (convex)
+ *	  T[1] is the "control point" set to T[0] for concave sections, and T[2] for convex
+ *	  T[2] is the end point of the quadratic, which will be the midpoint or endpoint of the s.
  *
  *  TODO MATH EXPLANATION
  *  
- *  A = T[0] - 2*T[1] + T[2]
- *  B = 2 * (T[1] - T[0])
- *  C = T[0]
- *  h = (1/mr.segments)
-
+ *    A = T[0] - 2*T[1] + T[2]
+ *    B = 2 * (T[1] - T[0])
+ *    C = T[0]
+ *    h = (1/mr.segments)
+ *
  *  forward_diff_1 = Ah^2+Bh = (T[0] - 2*T[1] + T[2])h*h + (2 * (T[1] - T[0]))h
  *  forward_diff_2 = 2Ah^2 = 2*(T[0] - 2*T[1] + T[2])h*h
  */
@@ -1240,11 +1300,62 @@ static void _test_get_junction_vmax(void);
 static void _test_trapezoid(double length, double Ve, double Vt, double Vx, mpBuf_t *bf);
 static void _make_unit_vector(double unit[], double x, double y, double z, double a, double b, double c);
 //static void _set_jerk(const double jerk, mpBuf_t *bf);
+static void _test_get_target_length(void);
+static void _test_get_target_velocity(void);
 
 void mp_unit_tests()
 {
-	_test_calculate_trapezoid();
+	_test_get_target_length();
+//	_test_get_target_velocity();
+//	_test_calculate_trapezoid();
 //	_test_get_junction_vmax();
+}
+
+static void _test_get_target_length()
+{
+	mpBuf_t *bf = mp_get_write_buffer();
+	bf->jerk = 1800000;
+	bf->recip_jerk = 1/bf->jerk;
+	double L;
+	double Vi;
+	double Vt;
+
+	Vi = 0;
+	Vt = 300;
+	L = _get_target_length(Vi, Vt, bf);		// result: L = 3.872983
+	Vt = _get_target_velocity(Vi, L, bf);	// result: Vt = 300
+
+	Vi = 165;
+	Vt = 300;
+	L = _get_target_length(Vi, Vt, bf);		// result: L = 4.027018
+	Vt = _get_target_velocity(Vi, L, bf);	// result: Vt = 300
+
+	Vi = 523;
+	Vt = 600;
+	L = _get_target_length(Vi, Vt, bf);		// result: L = 7.344950
+	Vt = _get_target_velocity(Vi, L, bf);	// result: Vt = 600
+
+	Vi = 200;
+	Vt = 400;
+	L = _get_target_length(Vi, Vt, bf);		// result: L = 6.324555
+	Vt = _get_target_velocity(Vi, L, bf);	// result: Vt = 400
+
+	Vi = 174;
+	Vt = 347;
+	L = _get_target_length(Vi, Vt, bf);		// result: L = 5.107690
+	Vt = _get_target_velocity(Vi, L, bf);	// result: Vt = 347
+}
+
+static void _test_get_target_velocity()
+{
+	mpBuf_t *bf = mp_get_write_buffer();
+
+	double L = 3.872983;
+	double Vi = 0;
+	double Vt; 			// 300
+	bf->jerk = 1800000;
+
+	Vt = _get_target_velocity(Vi, L, bf);
 }
 
 static void _test_trapezoid(double length, double Ve, double Vt, double Vx, mpBuf_t *bf)
@@ -1262,7 +1373,7 @@ static void _test_trapezoid(double length, double Ve, double Vt, double Vx, mpBu
 
 static void _test_calculate_trapezoid()
 {
-	mpBuf_t *bf = _get_write_buffer();
+	mpBuf_t *bf = mp_get_write_buffer();
 
 // these tests are calibrated the following parameters:
 //	jerk_max 				50 000 000		(all axes)
@@ -1394,7 +1505,7 @@ static void _test_get_junction_vmax()
 //	cfg.a[C].jerk_max = JERK_TEST_VALUE;
 //	mm.jerk_transition_size = 0.5;
 //	mm.jerk_limit_max = 184.2;
-
+/*
 	mm.test_case = 1;				// straight line along X axis
 	_make_unit_vector(mm.a_unit, 1.0000, 0.0000, 0, 0, 0, 0);
 	_make_unit_vector(mm.b_unit, 1.0000, 0.0000, 0, 0, 0, 0);
@@ -1449,6 +1560,7 @@ static void _test_get_junction_vmax()
 	_make_unit_vector(mm.a_unit, 0.7071, 0.7071, 0, 0, 0, 0);
 	_make_unit_vector(mm.b_unit,-0.7071,-0.7071, 0, 0, 0, 0);
 	mm.test_velocity = _get_junction_vmax(mm.a_unit, mm.b_unit);
+*/
 }
 
 #endif // __UNIT_TEST_PLANNER

@@ -98,6 +98,7 @@ enum swState {						// state machine for managing debouncing and lockout
 struct swStruct {							// switch state
 	uint8_t switch_type;					// 0=NO, 1=NC - applies to all switches
 	uint8_t limit_flag;						// 1=limit switch thrown - do a lockout
+	uint8_t sw_num_thrown;					// number of switch that was just thrown
 	volatile uint8_t mode[NUM_SWITCHES];	// 0=disabled, 1=homing, 2=homing+limit, 3=limit
 	volatile uint8_t state[NUM_SWITCHES];	// see switch processing functions for explanation
 	volatile int8_t count[NUM_SWITCHES];	// deglitching and lockout counter
@@ -111,11 +112,14 @@ void gpio_init(void);
 void gpio_rtc_callback(void);
 uint8_t gpio_get_switch_mode(uint8_t sw_num);
 uint8_t gpio_get_limit_thrown(void);
+uint8_t gpio_get_sw_thrown(void);
 void gpio_reset_switches(void);
 uint8_t gpio_read_switch(uint8_t sw_num);
 
 void gpio_led_on(uint8_t led);
 void gpio_led_off(uint8_t led);
+void gpio_led_toggle(uint8_t led);
+uint8_t gpio_read_bit(uint8_t b);
 void gpio_set_bit_on(uint8_t b);
 void gpio_set_bit_off(uint8_t b);
 void sw_show_switch(void);

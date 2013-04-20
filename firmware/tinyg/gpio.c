@@ -159,6 +159,7 @@ void gpio_rtc_callback(void)
 			sw.state[i] = SW_IDLE; continue;
 		}
 		if (sw.count[i] == 0) {							// trigger point
+			sw.sw_num_thrown = i;						// record number of thrown switch
 			sw.state[i] = SW_LOCKOUT;
 //			sw_show_switch();							// only called if __DEBUG enabled
 			if (cm.cycle_state == CYCLE_HOMING) {		// regardless of switch type
@@ -171,12 +172,14 @@ void gpio_rtc_callback(void)
 }
 
 /*
- * gpio_get_switch_mode() - return switch mode setting
+ * gpio_get_switch_mode() 	- return switch mode setting
  * gpio_get_limit_thrown()  - return true if a limit was tripped
+ * gpio_get_sw_num()  		- return switch number most recently thrown
  */
 
 uint8_t gpio_get_switch_mode(uint8_t sw_num) { return (sw.mode[sw_num]);}
 uint8_t gpio_get_limit_thrown(void) { return(sw.limit_flag);}
+uint8_t gpio_get_sw_thrown(void) { return(sw.sw_num_thrown);}
 
 /*
  * gpio_reset_switches() - reset all switches and reset limit flag
@@ -219,45 +222,95 @@ uint8_t gpio_read_switch(uint8_t sw_num)
 /*
  * gpio_led_on() - turn led on - assumes TinyG LED mapping
  * gpio_led_off() - turn led on - assumes TinyG LED mapping
+ * gpio_led_toggle()
  */
 
 void gpio_led_on(uint8_t led)
 {
-	if (led == 0) return (gpio_set_bit_on(0x08));
-	if (led == 1) return (gpio_set_bit_on(0x04));
-	if (led == 2) return (gpio_set_bit_on(0x02));
-	if (led == 3) return (gpio_set_bit_on(0x01));
+//	if (led == 0) return (gpio_set_bit_on(0x08));
+//	if (led == 1) return (gpio_set_bit_on(0x04));
+//	if (led == 2) return (gpio_set_bit_on(0x02));
+//	if (led == 3) return (gpio_set_bit_on(0x01));
+
+	if (led == 0) gpio_set_bit_on(0x08); else 
+	if (led == 1) gpio_set_bit_on(0x04); else 
+	if (led == 2) gpio_set_bit_on(0x02); else 
+	if (led == 3) gpio_set_bit_on(0x01);
 }
 
 void gpio_led_off(uint8_t led)
 {
-	if (led == 0) return (gpio_set_bit_off(0x08));
-	if (led == 1) return (gpio_set_bit_off(0x04));
-	if (led == 2) return (gpio_set_bit_off(0x02));
-	if (led == 3) return (gpio_set_bit_off(0x01));
+//	if (led == 0) return (gpio_set_bit_off(0x08));
+//	if (led == 1) return (gpio_set_bit_off(0x04));
+//	if (led == 2) return (gpio_set_bit_off(0x02));
+//	if (led == 3) return (gpio_set_bit_off(0x01));
+
+	if (led == 0) gpio_set_bit_off(0x08); else 
+	if (led == 1) gpio_set_bit_off(0x04); else 
+	if (led == 2) gpio_set_bit_off(0x02); else 
+	if (led == 3) gpio_set_bit_off(0x01);
+}
+
+void gpio_led_toggle(uint8_t led)
+{
+	if (led == 0) {
+		if (gpio_read_bit(0x08)) {
+			gpio_set_bit_off(0x08);
+		} else {
+			gpio_set_bit_on(0x08);
+		}
+	} else if (led == 1) {
+		if (gpio_read_bit(0x04)) {
+			gpio_set_bit_off(0x04);
+		} else {
+			gpio_set_bit_on(0x04);
+		}
+	} else if (led == 2) {
+		if (gpio_read_bit(0x02)) {
+			gpio_set_bit_off(0x02);
+		} else {
+			gpio_set_bit_on(0x02);
+		}
+	} else if (led == 3) {
+		if (gpio_read_bit(0x08)) {
+			gpio_set_bit_off(0x08);
+		} else {
+			gpio_set_bit_on(0x08);
+		}
+	}
 }
 
 /*
+ * gpio_read_bit() - return true if bit is on, false if off
  * gpio_set_bit_on() - turn bit on
  * gpio_set_bit_off() - turn bit on
  *
  *	These functions have an inner remap depending on what hardware is running
  */
 
+uint8_t gpio_read_bit(uint8_t b)
+{
+	if (b & 0x08) { return (device.out_port[0]->IN & GPIO1_OUT_BIT_bm); }
+	if (b & 0x04) { return (device.out_port[1]->IN & GPIO1_OUT_BIT_bm); }
+	if (b & 0x02) { return (device.out_port[2]->IN & GPIO1_OUT_BIT_bm); }
+	if (b & 0x01) { return (device.out_port[3]->IN & GPIO1_OUT_BIT_bm); }
+	return (0);
+}
+
 void gpio_set_bit_on(uint8_t b)
 {
-	if (b & 0x08) { device.out_port[0]->OUTSET = GPIO1_OUT_BIT_bm;}
-	if (b & 0x04) { device.out_port[1]->OUTSET = GPIO1_OUT_BIT_bm;}
-	if (b & 0x02) { device.out_port[2]->OUTSET = GPIO1_OUT_BIT_bm;}
-	if (b & 0x01) { device.out_port[3]->OUTSET = GPIO1_OUT_BIT_bm;}
+	if (b & 0x08) { device.out_port[0]->OUTSET = GPIO1_OUT_BIT_bm; }
+	if (b & 0x04) { device.out_port[1]->OUTSET = GPIO1_OUT_BIT_bm; }
+	if (b & 0x02) { device.out_port[2]->OUTSET = GPIO1_OUT_BIT_bm; }
+	if (b & 0x01) { device.out_port[3]->OUTSET = GPIO1_OUT_BIT_bm; }
 }
 
 void gpio_set_bit_off(uint8_t b)
 {
-	if (b & 0x08) { device.out_port[0]->OUTCLR = GPIO1_OUT_BIT_bm;}
-	if (b & 0x04) { device.out_port[1]->OUTCLR = GPIO1_OUT_BIT_bm;}
-	if (b & 0x02) { device.out_port[2]->OUTCLR = GPIO1_OUT_BIT_bm;}
-	if (b & 0x01) { device.out_port[3]->OUTCLR = GPIO1_OUT_BIT_bm;}
+	if (b & 0x08) { device.out_port[0]->OUTCLR = GPIO1_OUT_BIT_bm; }
+	if (b & 0x04) { device.out_port[1]->OUTCLR = GPIO1_OUT_BIT_bm; }
+	if (b & 0x02) { device.out_port[2]->OUTCLR = GPIO1_OUT_BIT_bm; }
+	if (b & 0x01) { device.out_port[3]->OUTCLR = GPIO1_OUT_BIT_bm; }
 }
 
 // DEPRECATED CODE THAT MIGHT STILL BE USEFUL
@@ -337,7 +390,10 @@ void sw_show_switch(void) {}
 
 void gpio_unit_tests()
 {
-	_isr_helper(SW_MIN_X, X);
+//	_isr_helper(SW_MIN_X, X);
+	while (true) {
+		gpio_led_toggle(1);
+	}
 }
 
 #endif // __UNIT_TEST_GPIO
