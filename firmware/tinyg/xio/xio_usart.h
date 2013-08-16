@@ -155,8 +155,11 @@ enum xioFCState {
  *	     or a max of 254 characters usable
  */
 typedef struct xioUSART {
-	uint8_t fc_char;			 			// flow control character to send
-	volatile uint8_t fc_state;				// flow control state
+//	uint8_t fc_char;			 			// flow control character to send
+//	volatile uint8_t fc_state;				// flow control state
+	uint8_t fc_char_rx;			 			// RX-side flow control character to send
+	volatile uint8_t fc_state_rx;			// flow control state on RX side
+	volatile uint8_t fc_state_tx;			// flow control state on TX side
 
 	volatile buffer_t rx_buf_tail;			// RX buffer read index
 	volatile buffer_t rx_buf_head;			// RX buffer write index (written by ISR)
