@@ -117,6 +117,15 @@ ISR(USB_TX_ISR_vect) //ISR(USARTC0_DRE_vect)		// USARTC0 data register empty
 	}
 } 
 
+/*
+ * Pin Change (edge-detect) interrupt for CTS pin.
+ */
+
+ISR(USB_CTS_ISR_vect)	
+{
+	USBu.usart->CTRLA = CTRLA_RXON_TXON;		// force another interrupt
+}
+
 /* 
  * USB_RX_ISR - USB receiver interrupt (RX)
  *
