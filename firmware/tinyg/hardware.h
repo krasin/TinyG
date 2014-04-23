@@ -52,8 +52,16 @@
 ////////////////////////////
 
 #include "config.h"						// needed for the stat_t typedef
+
+#if !defined(TINYG_SIMULATOR)
 #include <avr/interrupt.h>
 #include "xmega/xmega_rtc.h"			// Xmega only. Goes away with RTC refactoring
+#endif
+
+#if defined(TINYG_SIMULATOR)
+#include "sim/sim.h"
+#endif
+
 
 // uncomment once motate Xmega port is available
 //#include "motatePins.h"

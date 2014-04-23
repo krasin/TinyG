@@ -211,7 +211,7 @@ char_t *pstr2str(const char *pgm_string)
 	strncpy_P(shared_buf, pgm_string, MESSAGE_LEN);
 	return (shared_buf);
 #endif
-#ifdef __ARM
+#if defined(__ARM) || defined(TINYG_SIMULATOR)
 	return ((char_t *)pgm_string);
 #endif
 }

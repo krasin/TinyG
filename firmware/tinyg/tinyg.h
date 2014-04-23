@@ -88,8 +88,12 @@
 /************************************************************************************
  ***** PLATFORM COMPATIBILITY *******************************************************
  ************************************************************************************/
+
+#if !defined(TINYG_SIMULATOR)
 #undef __AVR
 #define __AVR
+#endif
+
 //#undef __ARM
 //#define __ARM
 
@@ -189,6 +193,63 @@ typedef uint8_t char_t;			// In the ARM/GCC++ version char_t is typedef'd to uin
 #define strncpy_P strncpy
 
 #endif // __ARM
+
+/*********************************
+ * TINYG_SIMULATOR Compatibility *
+ *********************************/
+#if defined(TINYG_SIMULATOR)
+
+#define PROGMEM				// ignore PROGMEM declarations in ARM/GCC++
+#define PSTR (const char *)		// AVR macro is: PSTR(s) ((const PROGMEM char *)(s))
+
+typedef char char_t;
+
+#define GET_TABLE_WORD(a)  cfgArray[cmd->index].a	// get word value from cfgArray
+#define GET_TABLE_BYTE(a)  cfgArray[cmd->index].a	// get byte value from cfgArray
+#define GET_TABLE_FLOAT(a) cfgArray[cmd->index].a	// get byte value from cfgArray
+#define GET_TOKEN_BYTE(a)  (char_t)cfgArray[i].a	// get token byte value from cfgArray
+
+#define GET_TOKEN_STRING(i,a) strcpy_P(a, (char_t *)&cfgArray[(index_t)i].token); // populate the token string given the index
+
+#define GET_TEXT_ITEM(b,a) b[a]						// get text from an array of strings in flash
+#define GET_UNITS(a) msg_units[cm_get_units_mode(a)]
+
+// IO settings
+#define STD_IN 0				// STDIO defaults (stdio is not yet used in the ARM version)
+#define STD_OUT 0
+#define STD_ERR 0
+
+/* String compatibility
+ *
+ * The ARM stdio functions we are using still use char as input and output. The macros
+ * below do the casts for most cases, but not all. Vararg functions like the printf()
+ * family need special handling. These like char * as input and require casts as per:
+ *
+ *   printf((const char *)"Good Morning Hoboken!\n");
+ *
+ * The AVR also has "_P" variants that take PROGMEM strings as args.
+ * On the ARM/GCC++ the _P functions are just aliases of the non-P variants.
+ */
+#define strncpy(d,s,l) (char_t *)strncpy((char *)d, (char *)s, l)
+#define strncat(d,s,l) (char_t *)strncat((char *)d, (char *)s, l)
+#define strpbrk(d,s) (char_t *)strpbrk((char *)d, (char *)s)
+#define strcpy(d,s) (char_t *)strcpy((char *)d, (char *)s)
+#define strcat(d,s) (char_t *)strcat((char *)d, (char *)s)
+#define strstr(d,s) (char_t *)strstr((char *)d, (char *)s)
+#define strchr(d,s) (char_t *)strchr((char *)d, (char)s)
+#define strcmp(d,s) strcmp((char *)d, (char *)s)
+#define strtod(d,p) strtod((char *)d, (char **)p)
+#define strtof(d,p) strtof((char *)d, (char **)p)
+#define strlen(s) strlen((char *)s)
+
+#define printf_P printf		// these functions want char * as inputs, not char_t *
+#define fprintf_P fprintf	// just sayin'
+#define sprintf_P sprintf
+#define strcpy_P strcpy
+#define strncpy_P strncpy
+
+#endif
+
 
 /******************************************************************************
  ***** TINYG APPLICATION DEFINITIONS ******************************************

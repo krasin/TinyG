@@ -35,7 +35,11 @@
 #include "switch.h"
 #include "test.h"
 #include "pwm.h"
+
+#if !defined(TINYG_SIMULATOR)
 #include "xio.h"
+#endif
+
 
 #ifdef __AVR
 #include <avr/interrupt.h>

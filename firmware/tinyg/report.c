@@ -34,7 +34,12 @@
 #include "planner.h"
 #include "settings.h"
 #include "util.h"
+
+#if defined(TINYG_SIMULATOR)
+#include "sim/sim.h"
+#else
 #include "xio.h"
+#endif
 
 #ifdef __cplusplus
 extern "C"{

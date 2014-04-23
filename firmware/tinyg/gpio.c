@@ -46,7 +46,9 @@
  *					**** These bits CANNOT be used as 5v inputs ****
  */
 
+#if !defined(TINYG_SIMULATOR)
 #include <avr/interrupt.h>
+#endif
 
 #include "tinyg.h"
 #include "util.h"
@@ -56,7 +58,10 @@
 //#include "switch.h"
 #include "gpio.h"
 #include "canonical_machine.h"
+
+#if !defined(TINYG_SIMULATOR)
 #include "xio.h"						// signals
+#endif
 
 //======================== Parallel IO Functions ===============================
 

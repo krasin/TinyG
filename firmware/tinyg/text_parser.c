@@ -32,7 +32,13 @@
 #include "json_parser.h"
 #include "report.h"
 #include "help.h"
+
+#if defined(TINYG_SIMULATOR)
+#include "sim/sim.h"
+#else
 #include "xio.h"					// for ASCII char definitions
+#endif
+
 
 #ifdef __cplusplus
 extern "C"{
