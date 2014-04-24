@@ -14,7 +14,7 @@ before_install:
 install:
   - sudo apt-get install -qq gcc-avr binutils-avr avr-libc
 
-script: "( cd firmware/tinyg/default && make ) && ( cd firmware/tinyg/sim && make )"
+script: "(gcc --version && cd firmware/tinyg/default && make ) && ( cd firmware/tinyg/sim && make )"
 
 #after_success:
 #  - cd ../../.. && ./support/travis-push.py
