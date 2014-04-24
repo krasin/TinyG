@@ -31,14 +31,15 @@ LDFLAGS += -Wl,-u,vfprintf  -lm -Wl,-Map=tinyg.map
 LIBS = -lm 
 
 ## Objects that must be built in order to link
-OBJECTS = util.o canonical_machine.o config.o controller.o cycle_homing.o gcode_parser.o gpio.o help.o json_parser.o kinematics.o main.o planner.o report.o spindle.o hardware.o test.o pwm.o plan_line.o plan_arc.o config_app.o text_parser.o cycle_probing.o cycle_jogging.o plan_exec.o encoder.o persistence.o 
-## Note: excluded objects are: stepper.o xmega_rtc.o xmega_eeprom.o xmega_init.o xmega_interrupts.o xio_usb.o xio_pgm.o xio_rs485.o xio_usart.o xio_spi.o xio_file.o network.o switch.o xio.o
+OBJECTS = util.o canonical_machine.o config.o controller.o cycle_homing.o gcode_parser.o gpio.o help.o json_parser.o kinematics.o main.o planner.o report.o spindle.o hardware.o test.o pwm.o plan_line.o plan_arc.o config_app.o text_parser.o cycle_probing.o cycle_jogging.o plan_exec.o encoder.o sim.o 
+## Note: excluded objects are: stepper.o xmega_rtc.o xmega_eeprom.o xmega_init.o xmega_interrupts.o xio_usb.o xio_pgm.o xio_rs485.o xio_usart.o xio_spi.o xio_file.o network.o switch.o xio.o persistence.o
+## Note: added objects: sim.o
 
 ## Objects explicitly added by the user
 LINKONLYOBJECTS = 
 
 ## Build
-all: $(TARGET) tinyg.hex tinyg.lss size
+all: $(TARGET) tinyg.lss size
 
 ## Compile
 util.o: ../util.c
@@ -158,7 +159,7 @@ plan_exec.o: ../plan_exec.c
 encoder.o: ../encoder.c
 	$(CC) $(INCLUDES) $(CFLAGS) -c  $<
 
-persistence.o: ../persistence.c
+sim.o: sim.c
 	$(CC) $(INCLUDES) $(CFLAGS) -c  $<
 
 ##Link
@@ -170,7 +171,7 @@ $(TARGET): $(OBJECTS)
 
 size: ${TARGET}
 	@echo
-	@size -C ${TARGET}
+	@size -t ${TARGET}
 
 ## Clean target
 .PHONY: clean
