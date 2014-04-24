@@ -179,7 +179,7 @@ uint8_t isnumber(char_t c)
 	if (c == '.') { return (true); }
 	if (c == '-') { return (true); }
 	if (c == '+') { return (true); }
-	return (isdigit(c));
+	return (uint8_t) (isdigit(c));
 }
 
 char_t *escape_string(char_t *dst, char_t *src) 
