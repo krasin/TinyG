@@ -852,6 +852,11 @@ static stat_t get_rx(cmdObj_t *cmd)
 	cmd->objtype = TYPE_INTEGER;
 	return (STAT_OK);
 #endif
+#ifdef TINYG_SIMULATOR
+	cmd->value = (float)254;
+	cmd->objtype = TYPE_INTEGER;
+	return (STAT_OK);
+#endif
 }
 
 /* run_sx()	- send XOFF, XON --- test only 

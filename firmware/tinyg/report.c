@@ -611,9 +611,11 @@ uint8_t job_report_callback()
 	if (cfg.comm_mode == TEXT_MODE) {
 		// no-op, job_ids are client app state
 	} else if (js.json_syntax == JSON_SYNTAX_RELAXED) {
-		fprintf(stderr, "{job:[%lu,%lu,%lu,%lu]}\n", cs.job_id[0], cs.job_id[1], cs.job_id[2], cs.job_id[3] );
+		fprintf(stderr, "{job:[%lu,%lu,%lu,%lu]}\n", (unsigned long) cs.job_id[0],
+			(unsigned long) cs.job_id[1], (unsigned long) cs.job_id[2], (unsigned long) cs.job_id[3] );
 	} else {
-		fprintf(stderr, "{\"job\":[%lu,%lu,%lu,%lu]}\n", cs.job_id[0], cs.job_id[1], cs.job_id[2], cs.job_id[3] );
+		fprintf(stderr, "{\"job\":[%lu,%lu,%lu,%lu]}\n", (unsigned long) cs.job_id[0],
+			(unsigned long) cs.job_id[1], (unsigned long) cs.job_id[2], (unsigned long) cs.job_id[3] );
 		//job_clear_report();
 	}
 	return (STAT_OK);
