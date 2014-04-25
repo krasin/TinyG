@@ -10,7 +10,7 @@ CC = gcc
 CPP = g++
 
 ## Options common to compile, link and assembly rules
-COMMON = -Wall -Werror -Wunused-value
+COMMON = -Wall -Werror -Wno-unused-value
 
 ## Compile options common for all C compilation units.
 CFLAGS = $(COMMON)
