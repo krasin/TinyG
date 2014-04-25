@@ -39,7 +39,7 @@ OBJECTS = util.o canonical_machine.o config.o controller.o cycle_homing.o gcode_
 LINKONLYOBJECTS = 
 
 ## Build
-all: $(TARGET) tinyg.lss size
+all: $(TARGET) size
 
 ## Compile
 util.o: ../util.c
@@ -165,9 +165,6 @@ sim.o: sim.c
 ##Link
 $(TARGET): $(OBJECTS)
 	 $(CC) $(LDFLAGS) $(OBJECTS) $(LINKONLYOBJECTS) $(LIBDIRS) $(LIBS) -o $(TARGET)
-
-%.lss: $(TARGET)
-	objdump -h -S $< > $@
 
 size: ${TARGET}
 	@echo
