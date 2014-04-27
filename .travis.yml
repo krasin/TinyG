@@ -13,6 +13,7 @@ before_install:
 
 install:
   - sudo apt-get install -qq gcc-avr binutils-avr avr-libc
+  - gcc --version
 
 script: "(cd firmware/tinyg/default && make ) && ( cd firmware/tinyg/sim && make && ./test.sh )"
 
