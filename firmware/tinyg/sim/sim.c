@@ -6,6 +6,7 @@
 
 #include "../tinyg.h"
 #include "../config.h"
+#include "../planner.h"
 #include "../switch.h"
 #include "../stepper.h"
 #include "../xio.h"
@@ -102,7 +103,12 @@ stat_t st_prep_line(float travel_steps[], float following_error[], float segment
 }
 
 uint8_t stepper_isbusy() { return false; }
-void st_request_exec_move() {}
+
+void st_request_exec_move() {
+  fprintf(stderr, "st_request_exec_move\n");
+  if (mp_free_run_buffer()) cm_cycle_end();                       // free buffer & perform cycle_end if planner is empty
+}
+
 stat_t st_motor_power_callback() { return (STAT_OK); }
 
 // Switch
