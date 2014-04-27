@@ -9,11 +9,15 @@ env:
     - DEST_FILE_TEMPLATE="binaries/tinyg-{BRANCH}-{VERSION}.{EXT}"
 
 before_install:
+  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
   - sudo apt-get update -qq
 
 install:
-  - sudo apt-get install -qq gcc-avr binutils-avr avr-libc
+  - sudo apt-get install -qq gcc-avr binutils-avr avr-libc gcc-4.9 g++-4.9
+  - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 90
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.9 90
   - gcc --version
+  - g++ --version
 
 script: "(cd firmware/tinyg/default && make ) && ( cd firmware/tinyg/sim && make && ./test.sh )"
 
