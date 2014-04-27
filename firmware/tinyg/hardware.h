@@ -59,7 +59,7 @@
 #endif
 
 #if defined(TINYG_SIMULATOR)
-#include "sim/sim.h"
+#include "sim/sim_types.h"
 #endif
 
 

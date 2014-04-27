@@ -6,6 +6,7 @@
 #include "../config.h"
 #include "../switch.h"
 #include "../stepper.h"
+#include "../xio.h"
 
 #include "sim.h"
 

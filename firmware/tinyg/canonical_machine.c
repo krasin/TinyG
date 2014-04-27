@@ -100,10 +100,7 @@
 #include "switch.h"
 #include "hardware.h"
 #include "util.h"
-
-#if !defined(TINYG_SIMULATOR)
 #include "xio.h"			// for serial queue flush
-#endif
 
 
 #ifdef __cplusplus

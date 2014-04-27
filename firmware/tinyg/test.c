@@ -23,12 +23,7 @@
 #include "planner.h"
 #include "test.h"
 #include "util.h"
-
-#if defined(TINYG_SIMULATOR)
-#include "sim/sim.h"
-#else
 #include "xio.h"
-#endif
 
 // regression test files
 #ifdef __CANNED_TESTS

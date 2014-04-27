@@ -39,10 +39,7 @@
 #include "hardware.h"
 #include "help.h"
 #include "util.h"
-
-#if !defined(TINYG_SIMULATOR)
 #include "xio.h"
-#endif
 
 
 #ifdef __cplusplus

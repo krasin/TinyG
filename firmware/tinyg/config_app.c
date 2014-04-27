@@ -43,10 +43,7 @@
 #include "util.h"
 #include "help.h"
 #include "network.h"
-
-#if !defined(TINYG_SIMULATOR)
 #include "xio.h"
-#endif
 
 
 #ifdef __cplusplus

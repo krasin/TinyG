@@ -33,12 +33,7 @@
 #include "canonical_machine.h"
 #include "report.h"
 #include "util.h"
-
-#if defined(TINYG_SIMULATOR)
-#include "sim/sim.h"
-#else
 #include "xio.h"					// for char definitions
-#endif
 
 
 #ifdef __cplusplus
