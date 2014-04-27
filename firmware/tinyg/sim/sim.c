@@ -63,7 +63,7 @@ int xio_gets(const uint8_t dev, char *buf, const int size) {
     perror("fgets");
     return XIO_ERR;
   }
-  printf("\n%s", buf);
+  fprintf(stderr, "\n%s", buf);
   return XIO_OK;
 }
 
