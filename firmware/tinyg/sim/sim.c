@@ -30,6 +30,11 @@ buffer_t xio_get_tx_bufcount_usart(const xioUsart_t *dx) {
 }
 
 int xio_gets(const uint8_t dev, char *buf, const int size) {
+  static int i = 0;
+  i++;
+  if (i % 10 != 0) {
+      return XIO_EAGAIN;
+  }
   printf(">\n");
   if (NULL == fgets(buf, size, stdin)) {
     return XIO_ERR;
