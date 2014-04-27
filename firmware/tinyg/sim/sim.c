@@ -13,36 +13,19 @@
 #define XIO_OK 0
 #define XIO_ERR 1
 
-void xio_init(void) {
-  printf("xio_init\n");
-}
+void xio_init(void) {}
 
-FILE *xio_open(uint8_t dev, const char *addr, flags_t flags) {
-  printf("xio_open(dev=%d, addr=%s, flags=0x%x)\n", (int)dev, addr, (int)flags);
-  return NULL;
-}
+FILE *xio_open(uint8_t dev, const char *addr, flags_t flags) { return NULL; }
 
-int xio_ctrl(const uint8_t dev, const flags_t flags) {
-  printf("xio_ctrl(dev=%d, flags=0x%x)\n", (int)dev, (int)flags);
-  return 0;
-}
+int xio_ctrl(const uint8_t dev, const flags_t flags) { return 0; }
 
-void cli(void) {
-  printf("cli\n");
-}
+void cli(void) {}
 
-int xio_set_baud(const uint8_t dev, const uint8_t baud_rate) {
-  printf("xio_set_baud(dev=%d, baud_rate=%d)\n", (int) dev, (int) baud_rate);
-  return 0;
-}
+int xio_set_baud(const uint8_t dev, const uint8_t baud_rate) { return 0; }
 
-uint8_t xio_test_assertions() {
-  printf("xio_test_assertions\n");
-  return (STAT_OK);
-}
+uint8_t xio_test_assertions() { return (STAT_OK); }
 
 buffer_t xio_get_tx_bufcount_usart(const xioUsart_t *dx) {
-  printf("xio_get_tx_bufcount_usart(dx=0x%p)\n", (void*)dx);
   return 0;
 }
 
