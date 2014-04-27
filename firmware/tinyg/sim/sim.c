@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -35,8 +36,12 @@ int xio_gets(const uint8_t dev, char *buf, const int size) {
   if (i % 10 != 0) {
       return XIO_EAGAIN;
   }
-  printf(">\n");
   if (NULL == fgets(buf, size, stdin)) {
+    if (errno == 0) {
+      // EOF on stdin. The test is done, quit successfully.
+      _exit(0);
+    }
+    perror("fgets");
     return XIO_ERR;
   }
   return XIO_OK;
