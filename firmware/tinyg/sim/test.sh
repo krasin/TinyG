@@ -7,16 +7,13 @@ set -o nounset
 set -o errexit
 
 echo "============================================="
-echo "Running very basic test with full output ..."
+echo "Running very basic test with full checks ..."
 echo "============================================="
 echo ""
 
-./tinyg.elf < test.gcode
+echo -n "test.gcode -- "
+( cat test.gcode | grep -v "^;" | ./tinyg.elf 2>&1 | FileCheck test.gcode && echo "OK" ) || echo "FAIL"
 
-echo "============================================="
-echo "OK"
-echo "============================================="
-echo ""
 
 echo ""
 echo "============================================="
@@ -28,5 +25,5 @@ for i in ../../../gcode_samples/*.gcode
 do
   echo -n "$i -- "
   OUT_FILE=`basename $i`.out
-  (( ./tinyg.elf $i > $OUT_FILE 2>&1 ) && echo " OK" ) || ( echo " FAIL" && cat $OUT_FILE )
+  (( ./tinyg.elf $i > $OUT_FILE 2>&1 ) && echo "OK" ) || ( echo "FAIL" && cat $OUT_FILE )
 done
