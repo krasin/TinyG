@@ -16,12 +16,12 @@ before_install:
   - apt-cache search llvm
 
 install:
-  - sudo apt-get install -qq gcc-avr binutils-avr avr-libc gcc-4.8 g++-4.8 llvm-3.4-tools llvm-3.4
+  - sudo apt-get install -qq gcc-avr binutils-avr avr-libc gcc-4.8 g++-4.8 llvm-3.5-tools llvm-3.5
   - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 90
   - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90
   - gcc --version
   - g++ --version
-  - export PATH=$PATH:/usr/lib/llvm-3.4/bin
+  - export PATH=$PATH:/usr/lib/llvm-3.5/bin
 
 script: "(cd firmware/tinyg/default && make ) && ( cd firmware/tinyg/sim && make && ./test.sh )"
 
